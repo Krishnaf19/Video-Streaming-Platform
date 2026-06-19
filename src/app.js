@@ -14,11 +14,6 @@ app.use(express.static("public"))
 app.use(cookieParser())
 
 
-app.get("/test", (req,res)=>{
-    res.send("Working krishna")
-})
-
-
 //route import
 import router from './routes/user.routes.js'
 
