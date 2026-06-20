@@ -206,4 +206,123 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 })
 
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken }
+const updatePassword = asyncHandler(async (req, res) => {
+
+    //only login user can update password , so we will add a middle ware at the route 
+
+    const { oldPassword, newPassword } = req.body
+
+    const user = await User.findById(req.user?._id)
+
+    const isPasswordCorrect = user.isPasswordCorrect(oldPassword)
+
+    if (!isPasswordCorrect) {
+        throw new ApiError(400, "Incorrect old password")
+    }
+
+    user.password = newPassword                            //object me newPassword set hua hai save nahi
+    user.save({ validateBeforeSave: false })
+
+
+    return res
+        .status(200)
+        .json(200, {}, "Password updated successfully")
+
+})
+
+
+const updateAccountDetails = asyncHandler(async (req, res) => {
+
+    //login user can only update account details
+
+    const { fullName, email } = req.body
+
+    if (!fullName || !email) {
+        throw new ApiError(400, "All fields are required")
+    }
+
+    const user = User.findByIdAndUpdate(                   //we will add a middleware auth.middleware.js from there we get req.user
+        req.user?._id,
+
+        {
+            $set: {
+                fullName,
+                email
+            }
+        },
+
+        {
+            new: true
+        }
+    ).select("-password")
+
+    return res
+        .status(200)
+        .json(200, user, "Accound updated successfully")
+
+})
+
+
+const getCurrentUser = asyncHandler(async (req, res) => {
+
+    //if user is login than only current user will be fetched
+    const user = req.user
+
+    return res
+        .status(200)
+        .json(200, user, "Current user fetched successfully")
+})
+
+
+const updateAvatar = asyncHandler(async (req, res) => {
+
+    //login user can only update avatar
+    //get avatar and upload on cloudinary
+    //update in db
+    //return res
+
+    const avatarLocalPath = res.file?.path
+
+    if (!avatarLocalPath) {
+        throw new ApiError(400, "Avatar file is missing")
+    }
+
+    const avatar = await uploadOnCloudinary(avatarLocalPath)
+
+    if (!avatar) {
+        throw new ApiError(400, "Error while uploading Avatar on cloudinary")
+    }
+
+    const user = await User.findByIdAndUpdate(
+        req.user?._id,
+
+        {
+            $set: {
+                avatar: avatar.url
+            }
+        },
+
+        {
+            new: true
+        }
+    ).select("-password")
+
+    return res
+        .status(200)
+        .json(200, user, "Avatar updated successfully")
+})
+
+
+
+
+export {
+
+    registerUser,
+    loginUser,
+    logoutUser,
+    refreshAccessToken,
+    updatePassword,
+    updateAccountDetails,
+    getCurrentUser,
+    updateAvatar
+}
