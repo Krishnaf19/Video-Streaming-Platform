@@ -315,7 +315,7 @@ const updateAvatar = asyncHandler(async (req, res) => {
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
 
-    const { username } = res.params               //we are going to channel using url
+    const { username } = res.params               //we are going to find channel using url by username
 
     if (!username?.trim()) {
         throw new ApiError(400, "Username not found")
@@ -389,6 +389,64 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 
 })
 
+
+const getWatchHistroy = asyncHandler(async (req, res) => {
+    
+    const user = User.aggregate([
+        {
+            $match: {
+                //we can't do like this '_id: req.user._id' because in aggregation pipeline req.user._id will give a string but in mongodb _id is stored in objectId('string')
+                _id: new mongoose.Types.ObjectId(req.user._id)
+            }
+        },
+        {
+            $lookup: {
+                from: "videos",              //export const Video = model("Video", videoSchema) mongodb save model in lowercase and its prural form
+                localField: "watchHistory",
+                foreignField: "_id",
+                as: "watchHistory",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                            pipeline: [
+                                {
+                                    $project: {
+                                        fullName: 1,
+                                        username: 1,
+                                        avatar: 1
+                                    }
+                                },
+                                {
+                                    $addFields: {
+                                        owner: {
+                                            $first: "$owner"
+                                        }
+                                    }
+                                }
+                            ]
+                            
+                        }
+                    }
+                ]
+            }
+        }
+    ])
+
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+             user[0].watchHistory, 
+            "Watch history fetched successfully"))
+})
+
+
 export {
 
     registerUser,
@@ -399,5 +457,6 @@ export {
     updateAccountDetails,
     getCurrentUser,
     updateAvatar,
-    getUserChannelProfile
+    getUserChannelProfile,
+    getWatchHistroy
 }
