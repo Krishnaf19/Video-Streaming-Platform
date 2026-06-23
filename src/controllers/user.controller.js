@@ -106,19 +106,13 @@ const loginUser = asyncHandler(async (req, res) =>{
     const {email, username, password} = req.body
     console.log(email);
 
-    if (!username && !email) {
+    if (!email) {
         throw new ApiError(400, "username or email is required")
     }
     
-    // Here is an alternative of above code based on logic discussed in video:
-    // if (!(username || email)) {
-    //     throw new ApiError(400, "username or email is required")
-        
-    // }
-
-    const user = await User.findOne({
-        $or: [{username}, {email}]
-    })
+    const user = await User.findOne(
+         {email}
+    )
 
     if (!user) {
         throw new ApiError(404, "User does not exist")
@@ -147,9 +141,11 @@ const loginUser = asyncHandler(async (req, res) =>{
         new ApiResponse(
             200, 
             {
-                user: loggedInUser, accessToken, refreshToken
+                user: loggedInUser,
+                accessToken: accessToken,
+                refreshToken: refreshToken
             },
-            "User logged In Successfully"
+            "User logged in"
         )
     )
 
@@ -211,8 +207,8 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         .status(200)
         .cookie("accessToken", accessToken, options)
         .cookie("refreshToken", newRefreshToken, options)
-        .json(200, { accessToken, refreshToken: newRefreshToken },
-            "Access token is refreshed"
+        .json(
+            new ApiResponse(200, { accessToken, refreshToken: newRefreshToken }, "Access token is refreshed")
         )
 
 })
@@ -238,7 +234,7 @@ const updatePassword = asyncHandler(async (req, res) => {
 
     return res
         .status(200)
-        .json(200, {}, "Password updated successfully")
+        .json(new ApiResponse(200, {}, "Password updated successfully"))
 
 })
 
@@ -270,7 +266,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 
     return res
         .status(200)
-        .json(200, user, "Accound updated successfully")
+        .json(new ApiResponse(200, user, "Account updated successfully"))
 
 })
 
@@ -282,7 +278,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 
     return res
         .status(200)
-        .json(200, user, "Current user fetched successfully")
+        .json(new ApiResponse(200, user, "Current user fetched successfully"))
 })
 
 
@@ -321,7 +317,7 @@ const updateAvatar = asyncHandler(async (req, res) => {
 
     return res
         .status(200)
-        .json(200, user, "Avatar updated successfully")
+        .json(new ApiResponse(200, user, "Avatar updated successfully"))
 })
 
 
@@ -397,7 +393,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 
     return res
         .status(200)
-        .json(200, channel[0], "channel fetches successfully")
+        .json(new ApiResponse(200, channel[0], "Channel fetched successfully"))
 
 })
 
