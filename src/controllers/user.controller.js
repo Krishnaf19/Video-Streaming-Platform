@@ -145,7 +145,7 @@ const loginUser = asyncHandler(async (req, res) => {
                     accessToken: accessToken,
                     refreshToken: refreshToken
                 },
-                "User logged in"
+                "User logged in successfully"
             )
         )
 
@@ -398,18 +398,16 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 })
 
 
-const getWatchHistroy = asyncHandler(async (req, res) => {
-
-    const user = User.aggregate([
+const getWatchHistory = asyncHandler(async(req, res) => {
+    const user = await User.aggregate([
         {
             $match: {
-                //we can't do like this '_id: req.user._id' because in aggregation pipeline req.user._id will give a string but in mongodb _id is stored in objectId('string')
                 _id: new mongoose.Types.ObjectId(req.user._id)
             }
         },
         {
             $lookup: {
-                from: "videos",              //export const Video = model("Video", videoSchema) mongodb save model in lowercase and its prural form
+                from: "videos",
                 localField: "watchHistory",
                 foreignField: "_id",
                 as: "watchHistory",
@@ -432,8 +430,8 @@ const getWatchHistroy = asyncHandler(async (req, res) => {
                         }
                     },
                     {
-                        $addFields: {
-                            owner: {
+                        $addFields:{
+                            owner:{
                                 $first: "$owner"
                             }
                         }
@@ -443,14 +441,15 @@ const getWatchHistroy = asyncHandler(async (req, res) => {
         }
     ])
 
-
     return res
-        .status(200)
-        .json(
-            new ApiResponse(
-                200,
-                user[0].watchHistory,
-                "Watch history fetched successfully"))
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            user[0].watchHistory,
+            "Watch history fetched successfully"
+        )
+    )
 })
 
 
