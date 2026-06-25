@@ -39,6 +39,9 @@ const registerUser = asyncHandler(async (req, res) => {
 
 
     const { fullName, email, username, password } = req.body
+    console.log(req.body)
+    console.log("hello");
+    
 
     if ([fullName, email, username, password].some((field) => field?.trim() === "")) {      //some : it gives callback so that iteration will possiable in array 
         throw new ApiError(400, "All fields are required")
@@ -85,7 +88,7 @@ const registerUser = asyncHandler(async (req, res) => {
     )
 
     if (!createdUser) {
-        throw new ApiError(500, "Something went wrong while registering the user")
+        throw new ApiError(500, "Server Error: Something went wrong while registering the user")
     }
 
     return res.status(201).json(
@@ -96,6 +99,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
 
 const loginUser = asyncHandler(async (req, res) => {
+    
     // req body -> data
     // username or email
     //find the user
@@ -104,7 +108,7 @@ const loginUser = asyncHandler(async (req, res) => {
     //send cookie
 
     const { email, username, password } = req.body
-    console.log(email);
+    console.log(req.body);
 
     if (!email) {
         throw new ApiError(400, "username or email is required")
@@ -151,6 +155,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
 })
 
+
 const logoutUser = asyncHandler(async (req, res) => {
     await User.findByIdAndUpdate(
         req.user._id,
@@ -175,6 +180,7 @@ const logoutUser = asyncHandler(async (req, res) => {
         .clearCookie("refreshToken", options)
         .json(new ApiResponse(200, {}, "User logged Out"))
 })
+
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
 
@@ -464,5 +470,5 @@ export {
     getCurrentUser,
     updateAvatar,
     getUserChannelProfile,
-    getWatchHistroy
+    getWatchHistory
 }
