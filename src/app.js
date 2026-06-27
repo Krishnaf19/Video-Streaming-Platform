@@ -15,10 +15,22 @@ app.use(cookieParser())
 
 
 //route import
-import router from './routes/user.routes.js'
+import userRouter from "./routes/user.routes.js"
+import videoRouter from "./routes/video.route.js"
+import tweetRouter from "./routes/tweet.route.js"
+import SubscriptionRouter from "./routes/subscription.route.js"
+import playlistRouter from "./routes/playlist.route.js"
+import likeRouter from "./routes/like.route.js"
+import commentRouter from "./routes/comment.route.js"
 
 //route define
-app.use("/api/v1/users", router)                  //note: we are using 'use' because now route is present in another folder , therefore to call it we need to use middleware called as 'use'
+app.use("/api/v1/users", userRouter)                  //note: we are using 'use' because now route is present in another folder , therefore to call it we need to use middleware called as 'use'
+app.use("/api/v1/videos", videoRouter)
+app.use("/api/v1/tweets", tweetRouter)
+app.use("api/v1/subscriptions", SubscriptionRouter)
+app.use("/api/v1/playlists", playlistRouter)
+app.use("/api/v1/likes", likeRouter)
+app.use("/api/v1/comments", commentRouter)
 
 export { app }
  
