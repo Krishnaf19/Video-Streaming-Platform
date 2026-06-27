@@ -41,7 +41,7 @@ const getTweet = asyncHandler(async (req, res) => {
     const tweet = await Tweet.aggregate([
         {
             $match: {
-                owner : mongoose.Types.ObjectId(req.user?._id)
+                owner: new mongoose.Types.ObjectId(userId)
             }
         },
         {
@@ -53,6 +53,7 @@ const getTweet = asyncHandler(async (req, res) => {
                 pipeline: [
                     {
                         $project: {
+                            fullName: 1,
                             username: 1,
                             avatar: 1
                         }
@@ -61,18 +62,43 @@ const getTweet = asyncHandler(async (req, res) => {
             }
         },
         {
+            $lookup: {
+                from: "likes",
+                localField: "_id",
+                foreignField: "tweet",      
+                as: "tweetLikes"
+            }
+        },
+        {
             $addFields: {
                 ownerDetails: {
-                    $first: "$ownerDetails"
+                    $first: "$ownerDetails"     
+                },
+                totalLikes: {
+                    $size: "$tweetLikes"       
+                },
+                isLiked: {
+                    $cond: {
+                        if: { $in: [req.user?._id, "$tweetLikes.likedBy"] },
+                        then: true,
+                        else: false
+                    }
                 }
             }
         },
         {
             $project: {
-                ownerDetails: 1
+                content: 1,
+                ownerDetails: 1,
+                totalLikes: 1,
+                isLiked: 1,
             }
         }
     ])
+
+    if (!tweets?.length) {
+        throw new ApiError(404, "No tweets found")
+    }
 
     return res
     .status(200)
@@ -87,9 +113,7 @@ const updateTweet = asyncHandler(async (req, res) => {
     const{ content } = req.body
     const { tweetId } = req.params
 
-    const tweet = await Tweet.findById(tweetId)
-
-    if (!isValidObjectId(tweet)) {
+    if (!isValidObjectId(tweetId)) {
         throw new ApiError(400, "TweetId invalid");
     }
 
@@ -120,9 +144,7 @@ const deleteTweet = asyncHandler(async (req, res) => {
     
     const { tweetId } = req.params
 
-    const tweet = Tweet.findById(tweetId)
-
-    if(!isValidObjectId(tweet)){
+    if(!isValidObjectId(tweetId)){
         throw new ApiError(400, "TweetId invalid");
     }
 

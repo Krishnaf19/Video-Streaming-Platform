@@ -10,8 +10,81 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js"
 const getAllVideos = asyncHandler(async (req, res) => {
 
     const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
-    //todo
-   
+
+    console.log(userId);
+    const pipeline = [];
+
+    if (query) {
+        pipeline.push({
+            $search: {
+                index: "search-videos",
+                text: {
+                    query: query,
+                    path: ["title", "description"] 
+                }
+            }
+        });
+    }
+
+    if (userId) {
+        if (!isValidObjectId(userId)) {
+            throw new ApiError(400, "Invalid userId");
+        }
+
+        pipeline.push({
+            $match: {
+                owner: new mongoose.Types.ObjectId(userId)
+            }
+        });
+    }
+
+    pipeline.push({ $match: { isPublished: true } });
+
+    if (sortBy && sortType) {
+        pipeline.push({
+            $sort: {
+                [sortBy]: sortType === "asc" ? 1 : -1
+            }
+        });
+    } else {
+        pipeline.push({ $sort: { createdAt: -1 } });
+    }
+
+    pipeline.push(
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "ownerDetails",
+                pipeline: [
+                    {
+                        $project: {
+                            username: 1,
+                            "avatar.url": 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $unwind: "$ownerDetails"
+        }
+    )
+
+    const videoAggregate = Video.aggregate(pipeline);
+
+    const options = {
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10)
+    };
+
+    const video = await Video.aggregatePaginate(videoAggregate, options);
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, video, "Videos fetched successfully"));
+
 })
 
 const publishAVideo = asyncHandler(async (req, res) => {
@@ -63,7 +136,6 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
 const getVideoById = asyncHandler(async (req, res) => {
 
-    //todo
     const { videoId } = req.params
 
     if (!isValidObjectId(videoId)) {
@@ -71,7 +143,70 @@ const getVideoById = asyncHandler(async (req, res) => {
     }
 
     const video = await Video.aggregate([
-        
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(videoId)  
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [
+                    {
+                        $project: {
+                            fullName: 1,
+                            username: 1,
+                            avatar: 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $lookup: {
+                from: "likes",
+                localField: "_id",       
+                foreignField: "video",  
+                as: "likesInVideo"
+            }
+        },
+        {
+            $lookup: {
+                from: "comments",
+                localField: "_id",       
+                foreignField: "video",  
+                as: "commentsInVideo"
+            }
+        },
+        {
+            $addFields: {               
+                totalLikes: {
+                    $size: "$likesInVideo"     
+                },
+                totalComments: {
+                    $size: "$commentsInVideo"   
+                },
+                owner: {
+                    $first: "$owner"    
+                }
+            }
+        },
+        {
+            $project: {
+                videoFile: 1,
+                thumbnail: 1,
+                title: 1,
+                duration: 1,
+                views: 1,
+                description: 1,
+                owner: 1,          
+                totalLikes: 1,
+                totalComments: 1
+            }
+        }
     ])
 
     if (!video) {
@@ -89,13 +224,11 @@ const updateVideo = asyncHandler(async (req, res) => {
 
     const { videoId } = req.params
 
-    const video = await Video.findById(videoId)
-
-    if (!isValidObjectId(video)) {
+    if (!isValidObjectId(videoId)) {
         throw new ApiError(400, "VideoId invalid")
     }
 
-    if(req.user?._id.toString() !== video.owner?.toString()){
+    if (req.user?._id.toString() !== video.owner?.toString()) {
         throw new ApiError(403, "Only owner can update video")
     }
 
@@ -127,14 +260,12 @@ const updateVideo = asyncHandler(async (req, res) => {
 const deleteVideo = asyncHandler(async (req, res) => {
 
     const { videoId } = req.params
-    
-    const video = await Video.findById(videoId)
 
-    if (!isValidObjectId(video)) {
+    if (!isValidObjectId(videoId)) {
         throw new ApiError(400, "VideoId invalid")
     }
 
-     if(req.user?._id.toString() !== video.owner?.toString()){
+    if (req.user?._id.toString() !== video.owner?.toString()) {
         throw new ApiError(403, "Only owner can delete video")
     }
 
@@ -155,9 +286,7 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
 
     const { videoId } = req.params
 
-    const video = await Video.findById(videoId)
-
-    if (!isValidObjectId(video)) {
+    if (!isValidObjectId(videoId)) {
         throw new ApiError(400, "VideoId is required or invalid")
     }
 

@@ -121,7 +121,16 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                 from: "users",
                 localField: "ownerDetails",
                 foreignField: "_id",
-                as: "ownerDetails"
+                as: "ownerDetails",
+                pipeline: [
+                    {
+                        $project: {
+                            fullName: 1,
+                            username: 1,
+                            avatar: 1
+                        }
+                    }
+                ]
             }
         },
         {
@@ -130,6 +139,19 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                 localField: "videosDetails",
                 foreignField: "_id",
                 as: "videosDetails",
+                pipeline: [
+                    {
+                        $project: {
+                            _id: 1,
+                            videoFile: 1,
+                            thumbnail: 1,
+                            title: 1,
+                            description: 1,
+                            duration: 1,
+                            views: 1
+                        }
+                    }
+                ]
             }
         },
         {
@@ -149,23 +171,11 @@ const getPlaylistById = asyncHandler(async (req, res) => {
             $project: {
                 _id: 1,
                 name: 1,
-                description: 1;
+                description: 1,
                 totalVideos: 1,
                 totalViews: 1,
-                ownerDetails: {
-                    fullName: 1,
-                    username: 1,
-                    avatar: 1
-                },
-                videosDetails: {
-                    _id: 1,
-                    videoFile: 1,
-                    thumbnail: 1,
-                    title: 1,
-                    description: 1,
-                    duration: 1,
-                    views: 1
-                }
+                ownerDetails: 1,
+                videosDetails: 1
             }
         }
     ])
@@ -185,13 +195,10 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
 
     const { playlistId, videoId } = req.params
 
-    const playlist = await Playlist.findById(playlistId);
-    const video = await Video.findById(videoId);
-
-    if (!isValidObjectId(playlist)) {
+    if (!isValidObjectId(playlistId)) {
         throw new ApiError(400, "PlaylistId invalid");
     }
-    if (!isValidObjectId(video)) {
+    if (!isValidObjectId(videoId)) {
         throw new ApiError(400, "VideoId invalid");
     }
 
@@ -227,18 +234,15 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
 
     const { playlistId, videoId } = req.params
 
-    const playlist = await Playlist.findById(playlistId)
-    const video = await Video.findById(videoId)
-    
-    if(!isValidObjectId(playlist)){
+    if (!isValidObjectId(playlistId)) {
         throw new ApiError(400, "PlaylistId invalid")
     }
 
-    if(!isValidObjectId(video)){
+    if (!isValidObjectId(videoId)) {
         throw new ApiError(400, "VideoId invalid")
     }
 
-    if(req.user?._id.toString() !== playlist.owner?.toString()){
+    if (req.user?._id.toString() !== playlist.owner?.toString()) {
         throw new ApiError(403, "Only owner can remove video from playlist")
     }
 
@@ -255,10 +259,10 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
     )
 
     return res
-    .status(200)
-    .json(
-        new ApiResponse(200, updatePlaylist, "Video removed from playlist successfully")
-    )
+        .status(200)
+        .json(
+            new ApiResponse(200, updatePlaylist, "Video removed from playlist successfully")
+        )
 
 })
 
@@ -266,21 +270,19 @@ const deletePlaylist = asyncHandler(async (req, res) => {
 
     const { playlistId } = req.params
 
-    const playlist = await Playlist.findById(playlistId)
-
-    if(!isValidObjectId(playlist)){
+    if (!isValidObjectId(playlistId)) {
         throw new ApiError(400, "PlaylistId invalid")
     }
 
     await Playlist.findByIdAndDelete(playlistId)
 
     return res
-    .status(200)
-    .json(
-        new ApiResponse(200, {}, "Playlist deleted successfully")
-    )
+        .status(200)
+        .json(
+            new ApiResponse(200, {}, "Playlist deleted successfully")
+        )
 
-    
+
 })
 
 const updatePlaylist = asyncHandler(async (req, res) => {
@@ -292,13 +294,11 @@ const updatePlaylist = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Name and description both are required");
     }
 
-    const playlist = await Playlist.findById(playlistId)
-
-    if(!isValidObjectId(playlist)){
+    if (!isValidObjectId(playlistId)) {
         throw new ApiError(400, "PlaylistId invalid")
     }
 
-    if(req.user?._id.toString() !== playlist.owner?.toString()){
+    if (req.user?._id.toString() !== playlist.owner?.toString()) {
         throw new ApiError(403, "Only owner can update")
     }
 
@@ -315,15 +315,15 @@ const updatePlaylist = asyncHandler(async (req, res) => {
         }
     )
 
-    if(updatePlaylist){
+    if (updatePlaylist) {
         throw new ApiError(500, "Server Error: unable to update playlist")
     }
 
     return res
-    .status(200)
-    .json(
-        new ApiResponse(200, updatePlaylist, "Playlist updated successfully")
-    )
+        .status(200)
+        .json(
+            new ApiResponse(200, updatePlaylist, "Playlist updated successfully")
+        )
 })
 
 export {

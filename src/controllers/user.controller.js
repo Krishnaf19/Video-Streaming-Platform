@@ -335,9 +335,6 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Username not found")
     }
 
-    /*const user=  User.find({username})
-    const channel = User.find(user?._id)*/
-
     const channel = await User.aggregate([
 
         {

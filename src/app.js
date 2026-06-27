@@ -22,6 +22,7 @@ import SubscriptionRouter from "./routes/subscription.route.js"
 import playlistRouter from "./routes/playlist.route.js"
 import likeRouter from "./routes/like.route.js"
 import commentRouter from "./routes/comment.route.js"
+import dashboardRouter from "./routes/dashboard.route.js"
 
 //route define
 app.use("/api/v1/users", userRouter)                  //note: we are using 'use' because now route is present in another folder , therefore to call it we need to use middleware called as 'use'
@@ -31,6 +32,7 @@ app.use("api/v1/subscriptions", SubscriptionRouter)
 app.use("/api/v1/playlists", playlistRouter)
 app.use("/api/v1/likes", likeRouter)
 app.use("/api/v1/comments", commentRouter)
+app.use("/api/v1/dashboard", dashboardRouter)
 
 export { app }
  

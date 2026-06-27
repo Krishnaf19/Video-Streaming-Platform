@@ -12,9 +12,7 @@ const toggleSubscription = asyncHandler(async (req, res) => {
 
     const { channelId } = req.params
 
-    const channel = await Subscription.findbyId(channelId)
-
-    if (!isValidObjectId(channel)) {
+    if (!isValidObjectId(channelId)) {
         throw new ApiError(400, "ChannelId invalid")
     }
 
@@ -59,7 +57,7 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
     const channelSubscribers = await Subscription.aggregate([
         {
             $match: {
-                _id: mongoose.Types.ObjectId(channelId)
+                channel: new mongoose.Types.ObjectId(channelId)
             }
         },
         {
@@ -67,44 +65,49 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
                 from: "users",
                 localField: "subscriber",
                 foreignField: "_id",
-                as: "subscriber",
+                as: "subscriberDetails",
                 pipeline: [
                     {
                         $lookup: {
-                            from: "sunscriptions",
-                            localField: "subscribedToChannel",
+                            from: "subscriptions",
+                            localField: "_id",
                             foreignField: "channel",
-                            as: "subscribedToChannel"
+                            as: "subscribedToSubscriber"
                         }
                     },
                     {
-                        $addField: {
-                            subscribedToChannel: {
+                        $addFields: {
+                            isSubscribed: {
                                 $cond: {
-                                    if: { $in: [channelId, "$subscribedToChannel.channel"] },
+                                    if: { $in: [new mongoose.Types.ObjectId(channelId), "$subscribedToSubscriber.subscriber"] },
                                     then: true,
                                     else: false
                                 }
                             },
-                            subcribersCount: {
-                                $size: "$subscribedToChannel"
+                            subscribersCount: {
+                                $size: "$subscribedToSubscriber"
                             }
+                        }
+                    },
+                    {
+                        $project: {
+                            fullName: 1,
+                            username: 1,
+                            avatar: 1,
+                            isSubscribed: 1,
+                            subscribersCount: 1
                         }
                     }
                 ]
             }
         },
         {
+            $unwind: "$subscriberDetails"
+        },
+        {
             $project: {
                 _id: 0,
-                subscriber: {
-                    _id: 1,
-                    username: 1,
-                    fullName: 1,
-                    "avatar.url": 1,
-                    subscribedToChannel: 1,
-                    subcribersCount: 1,
-                },
+                subscriberDetails: 1,
             }
         }
     ])
@@ -128,9 +131,9 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
     }
 
     const subscribedChannels = await Subscription.aggregate([
-        {
+       {
             $match: {
-                _id: mongoose.Types.ObjectId(subscriberId)
+                subscriber: new mongoose.Types.ObjectId(subscriberId)
             }
         },
         {
@@ -138,42 +141,51 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
                 from: "users",
                 localField: "channel",
                 foreignField: "_id",
-                as: "channel",
+                as: "channelDetails",
                 pipeline: [
                     {
                         $lookup: {
                             from: "subscriptions",
-                            localField: "totalChannelsSubscribed",
+                            localField: "_id",
                             foreignField: "channel",
-                            as: "totalChannelsSubscribed"
+                            as: "channelSubscribers"
                         }
                     },
                     {
-                        $addField: {
-                            totalChannelsSubscribed: {
-                                $$cond: {
-                                    if: { $in: [subscriberId, "$totalChannelsSubscribed.channel"] },
+                        $addFields: {
+                       
+                            isSubscribed: {
+                                $cond: {
+                                    if: { $in: [new mongoose.Types.ObjectId(subscriberId), "$channelSubscribers.subscriber"] },
                                     then: true,
                                     else: false
                                 }
                             },
-                            totalChannel: {
-                                $size: "$totalChannelsSubscribed"
+                            
+                            subscribersCount: {
+                                $size: "$channelSubscribers"
                             }
+                        }
+                    },
+                    {
+                        $project: {
+                            fullName: 1,
+                            username: 1,
+                            avatar: 1,
+                            isSubscribed: 1,
+                            subscribersCount: 1
                         }
                     }
                 ]
             }
         },
         {
+            $unwind: "$channelDetails"
+        },
+        {
             $project: {
                 _id: 0,
-                channel: {
-                    _id: 1,
-                    username: 1,
-                    fullName: 1,
-                    "avatar.url": 1
-                }
+                channelDetails: 1
             }
         }
     ])
