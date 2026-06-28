@@ -303,7 +303,7 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
             }
         },
         {
-            new: true
+            new: true              //this new return whole updated document ,although we don't need videoFile, title, description ,etc
         }
     )
 
