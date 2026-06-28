@@ -28,7 +28,7 @@ import dashboardRouter from "./routes/dashboard.route.js"
 app.use("/api/v1/users", userRouter)                  //note: we are using 'use' because now route is present in another folder , therefore to call it we need to use middleware called as 'use'
 app.use("/api/v1/videos", videoRouter)
 app.use("/api/v1/tweets", tweetRouter)
-app.use("api/v1/subscriptions", SubscriptionRouter)
+app.use("/api/v1/subscriptions", SubscriptionRouter)
 app.use("/api/v1/playlists", playlistRouter)
 app.use("/api/v1/likes", likeRouter)
 app.use("/api/v1/comments", commentRouter)

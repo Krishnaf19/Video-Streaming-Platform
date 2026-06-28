@@ -48,9 +48,7 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
 
     const { channelId } = req.params
 
-    const channel = await Subscription.findbyId(channelId)
-
-    if (!isValidObjectId(channel)) {
+    if (!isValidObjectId(channelId)) {
         throw new ApiError(400, "ChannelId invalid")
     }
 
@@ -124,9 +122,7 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
 
     const { subscriberId } = req.params
 
-    const subscriber = await Subscription.findbyId(subscriberId)
-
-    if (!isValidObjectId(subscriber)) {
+    if (!isValidObjectId(subscriberId)) {
         throw new ApiError(400, "SubscriberId invalid")
     }
 

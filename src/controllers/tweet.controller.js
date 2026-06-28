@@ -6,42 +6,47 @@ import { User } from "../models/user.model.js"
 import { Tweet } from "../models/tweets.model.js"
 
 const createTweet = asyncHandler(async (req, res) => {
-    
+
     const { content } = req.body
 
-    if(!content){
+    if (!content) {
         throw new ApiError(400, "Content is required for tweet")
     }
-    
+
     const tweet = await Tweet.create({
         owner: req.user?._id,
         content
     })
 
-    if(!tweet){
+    if (!tweet) {
         throw new ApiError(500, "Server Error: Unable to create tweet")
     }
 
     return res
-    .status(200)
-    .json(
-        new ApiResponse(200, tweet, "Tweet created successfully")
-    )
+        .status(200)
+        .json(
+            new ApiResponse(200, tweet, "Tweet created successfully")
+        )
 })
 
 const getTweet = asyncHandler(async (req, res) => {
-    
+
     const { username } = req.params
-    
+
     if (!username?.trim()) {
         throw new ApiError(400, "Username not found")
     }
 
+    const user = await User.findOne({ username: username?.toLowerCase() })
+
+    if (!user) {
+        throw new ApiError(404, "User not found")
+    }
 
     const tweet = await Tweet.aggregate([
         {
             $match: {
-                owner: new mongoose.Types.ObjectId(userId)
+                owner: new mongoose.Types.ObjectId(user._id)
             }
         },
         {
@@ -65,17 +70,17 @@ const getTweet = asyncHandler(async (req, res) => {
             $lookup: {
                 from: "likes",
                 localField: "_id",
-                foreignField: "tweet",      
+                foreignField: "tweet",
                 as: "tweetLikes"
             }
         },
         {
             $addFields: {
                 ownerDetails: {
-                    $first: "$ownerDetails"     
+                    $first: "$ownerDetails"
                 },
                 totalLikes: {
-                    $size: "$tweetLikes"       
+                    $size: "$tweetLikes"
                 },
                 isLiked: {
                     $cond: {
@@ -96,28 +101,30 @@ const getTweet = asyncHandler(async (req, res) => {
         }
     ])
 
-    if (!tweets?.length) {
+    if (!tweet?.length) {
         throw new ApiError(404, "No tweets found")
     }
 
     return res
-    .status(200)
-    .json(
-        new ApiResponse(200, tweet, "Tweet fetched successfully")
-    )
+        .status(200)
+        .json(
+            new ApiResponse(200, tweet, "Tweet fetched successfully")
+        )
 
 })
 
 const updateTweet = asyncHandler(async (req, res) => {
 
-    const{ content } = req.body
+    const { content } = req.body
     const { tweetId } = req.params
 
     if (!isValidObjectId(tweetId)) {
         throw new ApiError(400, "TweetId invalid");
     }
 
-    if(tweet.owner.toString() !== req.user._id.toString()){
+    const tweet = await Tweet.findById(tweetId)
+
+    if (tweet.owner.toString() !== req.user._id.toString()) {
         throw new ApiError(403, "Only owner can edit")
     }
 
@@ -134,29 +141,31 @@ const updateTweet = asyncHandler(async (req, res) => {
     )
 
     return res
-    .status(200)
-    .json(
-        new ApiResponse(200, newTweet, "Tweet updated successfully")
-    )
+        .status(200)
+        .json(
+            new ApiResponse(200, newTweet, "Tweet updated successfully")
+        )
 })
 
 const deleteTweet = asyncHandler(async (req, res) => {
-    
+
     const { tweetId } = req.params
 
-    if(!isValidObjectId(tweetId)){
+    if (!isValidObjectId(tweetId)) {
         throw new ApiError(400, "TweetId invalid");
     }
 
-    if(tweet.owner.toString() !== req.user?._id.toString()){
+    const tweet = await Tweet.findById(tweetId)
+    
+    if (tweet.owner.toString() !== req.user?._id.toString()) {
         throw new ApiError(403, "Only owner can delete tweet")
     }
 
     await Tweet.findOneAndDelete(tweetId)
 
     return res
-    .status(200)
-    .json(200, {}, "Tweet deleted successfully")
+        .status(200)
+        .json(200, {}, "Tweet deleted successfully")
 })
 
 export {

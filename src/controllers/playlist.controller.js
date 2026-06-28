@@ -22,7 +22,7 @@ const createPlaylist = asyncHandler(async (req, res) => {
     })
 
     if (!playlist) {
-        throw new ApiResponse(500, "Server Error: Unable to create playlist")
+        throw new ApiError(500, "Server Error: Unable to create playlist")
     }
 
     return res
@@ -40,16 +40,18 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
         throw new ApiError(400, "UserId invalid")
     }
 
+    const user = await User.findById(userId)
+
     const userPlaylists = await Playlist.aggregate([
         {
             $match: {
-                owner: mongoose.Types.ObjectId(userId)
+                owner: new mongoose.Types.ObjectId(user?._id)
             }
         },
         {
             $lookup: {
                 from: "videos",
-                localField: "videoDetails",
+                localField: "video",
                 foreignField: "_id",
                 as: "videoDetails",
                 pipeline: [
@@ -71,8 +73,8 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
                 totalVideos: {
                     $size: "$videoDetails"
                 },
-                totalViews: {
-                    $size: "videoDetails"
+                totalViews: { 
+                    $sum: "$videoDetails.views"
                 }
             }
         },
@@ -88,7 +90,7 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
         }
     ])
 
-    if (userPlaylists) {
+    if (!userPlaylists.length) {
         throw new ApiError(500, "Server Error: Unable to find playlist")
     }
 
@@ -113,13 +115,13 @@ const getPlaylistById = asyncHandler(async (req, res) => {
     const userPlaylist = await Playlist.aggregate([
         {
             $match: {
-                _id: mongoose.Types.ObjectId(playlistId)
+                _id: new mongoose.Types.ObjectId(playlistId)
             }
         },
         {
             $lookup: {
                 from: "users",
-                localField: "ownerDetails",
+                localField: "owner",
                 foreignField: "_id",
                 as: "ownerDetails",
                 pipeline: [
@@ -136,7 +138,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
         {
             $lookup: {
                 from: "videos",
-                localField: "videosDetails",
+                localField: "video",
                 foreignField: "_id",
                 as: "videosDetails",
                 pipeline: [
@@ -160,10 +162,10 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                     $size: "$videosDetails"
                 },
                 totalViews: {
-                    $size: "videosDetails"
+                    $sum: "videosDetails.views"
                 },
-                owner: {
-                    $first: "$owner"
+                ownerDetails: {                             //addfield me $first tab hi work krega jab ownerDetails se save kro
+                    $first: "$ownerDetails"
                 }
             }
         },
@@ -180,7 +182,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
         }
     ])
 
-    if (userPlaylist) {
+    if (!userPlaylist.length) {
         throw new ApiError(500, "Server Error: Unable to find playlist")
     }
 
@@ -202,6 +204,9 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
         throw new ApiError(400, "VideoId invalid");
     }
 
+    const playlist = await Playlist.findById(playlistId)
+    const video = await Video.findById(videoId)
+
     if (playlist.owner?.toString() && video.owner?.toString() !== req.user?._id.toString()) {
         throw new ApiError(403, "Only owner can add videos to playlist")
     }
@@ -218,14 +223,14 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
         }
     )
 
-    if (updatePlaylist) {
-        throw new ApiError(400, "Server Error: Unable to add video to playlist")
+    if (!updatePlaylist) {
+        throw new ApiError(500, "Server Error: Unable to add video to playlist")
     }
 
     return res
         .status(200)
         .json(
-            new ApiResponse(200, updatedPlaylist, "Playlist updated successfully")
+            new ApiResponse(200, updatedPlaylist, "Video added to playlist successfully")
         )
 
 })
@@ -242,6 +247,8 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
         throw new ApiError(400, "VideoId invalid")
     }
 
+    const playlist = await Playlist.findById(playlistId)
+    
     if (req.user?._id.toString() !== playlist.owner?.toString()) {
         throw new ApiError(403, "Only owner can remove video from playlist")
     }
@@ -294,9 +301,12 @@ const updatePlaylist = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Name and description both are required");
     }
 
+
     if (!isValidObjectId(playlistId)) {
         throw new ApiError(400, "PlaylistId invalid")
     }
+
+    const playlist =  await Playlist.findById(playlistId)
 
     if (req.user?._id.toString() !== playlist.owner?.toString()) {
         throw new ApiError(403, "Only owner can update")
@@ -315,7 +325,7 @@ const updatePlaylist = asyncHandler(async (req, res) => {
         }
     )
 
-    if (updatePlaylist) {
+    if (!updatePlaylist) {
         throw new ApiError(500, "Server Error: unable to update playlist")
     }
 

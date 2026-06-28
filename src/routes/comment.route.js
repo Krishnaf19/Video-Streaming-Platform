@@ -6,7 +6,7 @@ const router = Router()
 
 router.use(verifyJWT)
 
-router.route("/c/commentId")
+router.route("/c/:commentId")
     .post(updateComment)
     .delete(deleteComment)
 

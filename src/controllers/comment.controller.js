@@ -5,6 +5,7 @@ import { ApiResponse } from "../utils/ApiResponse.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
 import { User } from "../models/user.model.js"
 import { Video } from "../models/video.model.js"
+import { Like } from "../models/like.model.js"
 
 const getVideoComments = asyncHandler(async (req, res) => {
 
@@ -185,13 +186,15 @@ const deleteComment = asyncHandler(async (req, res) => {
         throw new ApiError(400, "CommentId invalid")
     }
 
+    const comment = await Comment.findById(commentId)
+
     if(req.user?._id.toString() !== comment?.owner.toString()){
         throw new ApiError(403, "Only owner can delete comment")
     }
 
     await Comment.findByIdAndDelete(commentId)
 
-    await Like.findByIdAndDelete(commentId)
+    await Like.deleteMany(commentId)
 
     return res
     .status(200)
