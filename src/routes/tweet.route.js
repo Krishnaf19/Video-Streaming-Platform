@@ -7,7 +7,7 @@ const router = Router()
 router.use(verifyJWT)
 
 router.route("/").post(createTweet)
-router.router("/u/:username").get(getTweet)
+router.route("/u/:username").get(getTweet)
 router.route("/t/:tweetId")
     .patch(updateTweet)
     .delete(deleteTweet)

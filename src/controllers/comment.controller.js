@@ -4,7 +4,7 @@ import { ApiError } from "../utils/ApiError.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
 import { User } from "../models/user.model.js"
-import { Video } from "../models/comment.model.js"
+import { Video } from "../models/video.model.js"
 
 const getVideoComments = asyncHandler(async (req, res) => {
 
@@ -146,6 +146,8 @@ const updateComment = asyncHandler(async (req, res) => {
     if (!isValidObjectId(commentId)) {
         throw new ApiError(400, "CommentId invaid");
     }
+
+    const comment = await Comment.findById(commentId)
 
     if (req.user?._id.toString() !== comment?.owner.toString()) {
         throw new ApiError(403, "Only ower can update")
